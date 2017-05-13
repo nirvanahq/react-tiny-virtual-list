@@ -214,6 +214,8 @@ export default class VirtualList extends PureComponent {
       itemCount,
       itemSize,
       positionBehavior,
+      renderAfter,
+      renderBefore,
       scrollDirection,
       scrollOffset,
       scrollToIndex,
@@ -244,6 +246,7 @@ export default class VirtualList extends PureComponent {
     return (
       <div ref={this._getRef} {...props} onScroll={this.handleScroll} style={{...STYLE_WRAPPER, ...style, height, width}}>
         <div style={{...STYLE_INNER, [sizeProp[scrollDirection]]: this.sizeAndPositionManager.getTotalSize()}}>
+          {renderBefore}
           {isAbsolutePositioned
             ? items
             : (
@@ -252,6 +255,7 @@ export default class VirtualList extends PureComponent {
               </div>
             )
           }
+          {renderAfter}
         </div>
       </div>
     );
