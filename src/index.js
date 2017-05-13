@@ -211,6 +211,7 @@ export default class VirtualList extends PureComponent {
       height,
       overscanCount,
       renderItem,
+      renderEmpty,
       itemCount,
       itemSize,
       positionBehavior,
@@ -242,6 +243,9 @@ export default class VirtualList extends PureComponent {
       }));
     }
 
+    if (!items.length && typeof renderEmpty === 'function') {
+      items = renderEmpty();
+    }
 
     return (
       <div ref={this._getRef} {...props} onScroll={this.handleScroll} style={{...STYLE_WRAPPER, ...style, height, width}}>
