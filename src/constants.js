@@ -5,6 +5,8 @@ export const DIRECTION_VERTICAL = 'vertical';
 export const DIRECTION_HORIZONTAL = 'horizontal';
 export const SCROLL_CHANGE_OBSERVED = 'observed';
 export const SCROLL_CHANGE_REQUESTED = 'requested';
+export const POSITION_ABSOLUTE = 'absolute';
+export const POSITION_RELATIVE = 'relative';
 
 export const scrollProp = {
   [DIRECTION_VERTICAL]: 'scrollTop',

@@ -7,6 +7,8 @@ import {
   ALIGN_START,
   DIRECTION_VERTICAL,
   DIRECTION_HORIZONTAL,
+  POSITION_ABSOLUTE,
+  POSITION_RELATIVE,
   SCROLL_CHANGE_OBSERVED,
   SCROLL_CHANGE_REQUESTED,
   positionProp,
@@ -15,14 +17,16 @@ import {
 } from './constants';
 
 const STYLE_WRAPPER = {overflow: 'auto', willChange: 'transform', WebkitOverflowScrolling: 'touch'};
-const STYLE_INNER = {position: 'relative', overflow: 'hidden', width: '100%', minHeight: '100%'};
-const STYLE_ITEM = {position: 'absolute', left: 0, width: '100%'};
+const STYLE_INNER = {position: POSITION_RELATIVE, overflow: 'hidden', width: '100%', minHeight: '100%'};
+const STYLE_CONTENT = {position: POSITION_ABSOLUTE, top: 0, left: 0, height: '100%', width: '100%', overflow: 'visible'};
+const STYLE_ITEM = {position: POSITION_ABSOLUTE, left: 0, width: '100%'};
 
 export default class VirtualList extends PureComponent {
   static defaultProps = {
     overscanCount: 3,
     scrollDirection: DIRECTION_VERTICAL,
     width: '100%',
+    positionBehavior: POSITION_ABSOLUTE,
   };
   static propTypes = {
     estimatedItemSize: PropTypes.number,
@@ -30,6 +34,7 @@ export default class VirtualList extends PureComponent {
     itemCount: PropTypes.number.isRequired,
     itemSize: PropTypes.oneOfType([PropTypes.number, PropTypes.array, PropTypes.func]).isRequired,
     overscanCount: PropTypes.number,
+    positionBehavior: PropTypes.oneOf([POSITION_ABSOLUTE, POSITION_RELATIVE]),
     renderItem: PropTypes.func.isRequired,
     scrollOffset: PropTypes.number,
     scrollToIndex: PropTypes.number,
@@ -208,6 +213,7 @@ export default class VirtualList extends PureComponent {
       renderItem,
       itemCount,
       itemSize,
+      positionBehavior,
       scrollDirection,
       scrollOffset,
       scrollToIndex,
@@ -222,19 +228,30 @@ export default class VirtualList extends PureComponent {
       offset,
       overscanCount,
     });
-    const items = [];
+    const isAbsolutePositioned = (positionBehavior === POSITION_ABSOLUTE);
+    let items = [];
 
     for (let index = start; index <= stop; index++) {
       items.push(renderItem({
         index,
-        style: this.getStyle(index),
+        style: isAbsolutePositioned
+          ? this.getStyle(index)
+          : null,
       }));
     }
+
 
     return (
       <div ref={this._getRef} {...props} onScroll={this.handleScroll} style={{...STYLE_WRAPPER, ...style, height, width}}>
         <div style={{...STYLE_INNER, [sizeProp[scrollDirection]]: this.sizeAndPositionManager.getTotalSize()}}>
-          {items}
+          {isAbsolutePositioned
+            ? items
+            : (
+              <div style={{...STYLE_CONTENT, top: this.getOffsetForIndex(start)}}>
+                {items}
+              </div>
+            )
+          }
         </div>
       </div>
     );
