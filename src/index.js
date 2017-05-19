@@ -266,11 +266,6 @@ export default class VirtualList extends PureComponent {
     const isAbsolutePositioned = (positionBehavior === POSITION_ABSOLUTE);
     let items = [];
 
-    this._nextRenderOffset = {
-      bottomEdge: this.getOffsetForIndex(start + 1),
-      topEdge: this.getOffsetForIndex(stop) - height,
-    };
-
     for (let index = start; index <= stop; index++) {
       if (this._cellCache[index] == null) {
         this._cellCache[index] = renderItem({
@@ -284,7 +279,14 @@ export default class VirtualList extends PureComponent {
       items.push(this._cellCache[index]);
     }
 
-    if (!items.length && typeof renderEmpty === 'function') {
+    const hasItems = items.length;
+
+    if (hasItems) {
+      this._nextRenderOffset = {
+        bottomEdge: this.getOffsetForIndex(start + 1),
+        topEdge: this.getOffsetForIndex(stop) - height,
+      };
+    } else if (typeof renderEmpty === 'function') {
       items = renderEmpty();
     }
 
@@ -292,7 +294,7 @@ export default class VirtualList extends PureComponent {
       <div ref={this._getRef} {...props} onScroll={this.handleScroll} style={{...STYLE_WRAPPER, ...style, height, width}}>
         <div style={{...STYLE_INNER, [sizeProp[scrollDirection]]: this.sizeAndPositionManager.getTotalSize()}}>
           {renderBefore}
-          {(isAbsolutePositioned || !items.length)
+          {(isAbsolutePositioned || !hasItems)
             ? items
             : (
               <div style={{...STYLE_CONTENT, top: this.getOffsetForIndex(start)}}>
