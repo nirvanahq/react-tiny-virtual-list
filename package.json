@@ -20,6 +20,7 @@
     "test:ci": "jest && codecov"
   },
   "dependencies": {
+    "lodash": "^4.17.4",
     "prop-types": "^15.5.7"
   },
   "peerDependencies": {

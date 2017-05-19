@@ -1,5 +1,6 @@
 import React, {PureComponent} from 'react';
 import PropTypes from 'prop-types';
+import debounce from 'lodash/debounce';
 import SizeAndPositionManager from './SizeAndPositionManager';
 import {
   ALIGN_CENTER,
@@ -16,9 +17,9 @@ import {
   sizeProp,
 } from './constants';
 
-const STYLE_WRAPPER = {overflow: 'auto', willChange: 'transform', WebkitOverflowScrolling: 'touch'};
-const STYLE_INNER = {position: POSITION_RELATIVE, overflow: 'hidden', width: '100%', minHeight: '100%'};
-const STYLE_CONTENT = {position: POSITION_ABSOLUTE, top: 0, left: 0, height: '100%', width: '100%', overflow: 'visible'};
+const STYLE_WRAPPER = {overflow: 'auto', WebkitOverflowScrolling: 'touch'};
+const STYLE_INNER = {position: POSITION_RELATIVE, willChange: 'transform', overflow: 'hidden', width: '100%', minHeight: '100%'};
+const STYLE_CONTENT = {willChange: 'transform'};
 const STYLE_ITEM = {position: POSITION_ABSOLUTE, left: 0, width: '100%'};
 
 export default class VirtualList extends PureComponent {
@@ -58,6 +59,7 @@ export default class VirtualList extends PureComponent {
     scrollChangeReason: SCROLL_CHANGE_REQUESTED,
   };
 
+  _cellCache = {};
   _styleCache = {};
 
   _getRef = node => {
@@ -131,23 +133,51 @@ export default class VirtualList extends PureComponent {
     }
   }
 
+  _lastOffset = 0;
+
   handleScroll = e => {
     const {onScroll} = this.props;
+    const {isScrolling} = this.state;
     const offset = this.getNodeOffset();
+    const {bottomEdge, topEdge} = this._nextRenderOffset;
+    const direction = offset - this._lastOffset < 0
+      ? 'up'
+      : 'down';
 
-    if (offset < 0 || this.state.offset === offset || e.target !== this.rootNode) {
-      return;
+    if (
+      isScrolling && (
+        offset < 0 ||
+        this.state.offset === offset ||
+        e.target !== this.rootNode ||
+        direction === 'down' && offset < topEdge ||
+        direction === 'up' && offset > bottomEdge
+      )
+    ) {
+      // no-op
+    } else {
+      this.setState({
+        isScrolling: true,
+        offset,
+        scrollChangeReason: SCROLL_CHANGE_OBSERVED,
+      });
+
+      if (typeof onScroll === 'function') {
+        onScroll(offset, e);
+      }
+
+      this._lastOffset = offset;
     }
+
+    this.onScrollEnd();
+  };
+
+  onScrollEnd = debounce(() => {
+    this._cellCache = {};
 
     this.setState({
-      offset,
-      scrollChangeReason: SCROLL_CHANGE_OBSERVED,
+      isScrolling: false,
     });
-
-    if (typeof onScroll === 'function') {
-      onScroll(offset, e);
-    }
-  };
+  }, 150);
 
   getEstimatedItemSize(props = this.props) {
     return props.estimatedItemSize || typeof props.itemSize === "number" && props.itemSize || 50;
@@ -166,8 +196,10 @@ export default class VirtualList extends PureComponent {
   getOffsetForIndex(index, scrollToAlignment = this.props.scrollToAlignment, itemCount = this.props.itemCount) {
     const {scrollDirection} = this.props;
 
-    if (index < 0 || index >= itemCount) {
+    if (index < 0) {
       index = 0;
+    } else if (index >= itemCount) {
+      index = itemCount - 1;
     }
 
     return this.sizeAndPositionManager.getUpdatedOffsetForIndex({
@@ -225,7 +257,7 @@ export default class VirtualList extends PureComponent {
       width,
       ...props
     } = this.props;
-    const {offset} = this.state;
+    const {isScrolling, offset} = this.state;
     const {start, stop} = this.sizeAndPositionManager.getVisibleRange({
       containerSize: this.props[sizeProp[scrollDirection]],
       offset,
@@ -234,13 +266,22 @@ export default class VirtualList extends PureComponent {
     const isAbsolutePositioned = (positionBehavior === POSITION_ABSOLUTE);
     let items = [];
 
+    this._nextRenderOffset = {
+      bottomEdge: this.getOffsetForIndex(start + 1),
+      topEdge: this.getOffsetForIndex(stop) - height,
+    };
+
     for (let index = start; index <= stop; index++) {
-      items.push(renderItem({
-        index,
-        style: isAbsolutePositioned
-          ? this.getStyle(index)
-          : null,
-      }));
+      if (this._cellCache[index] == null) {
+        this._cellCache[index] = renderItem({
+          index,
+          style: isAbsolutePositioned
+            ? this.getStyle(index)
+            : null,
+        });
+      }
+
+      items.push(this._cellCache[index]);
     }
 
     if (!items.length && typeof renderEmpty === 'function') {
