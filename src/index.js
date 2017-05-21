@@ -19,7 +19,6 @@ import {
 
 const STYLE_WRAPPER = {overflow: 'auto', WebkitOverflowScrolling: 'touch'};
 const STYLE_INNER = {position: POSITION_RELATIVE, willChange: 'transform', overflow: 'hidden', width: '100%', minHeight: '100%'};
-const STYLE_CONTENT = {willChange: 'transform'};
 const STYLE_CONTENT = {position: POSITION_RELATIVE, willChange: 'transform'};
 const STYLE_ITEM = {position: POSITION_ABSOLUTE, left: 0, width: '100%'};
 
@@ -95,6 +94,8 @@ export default class VirtualList extends PureComponent {
       nextProps.itemSize !== itemSize ||
       nextProps.estimatedItemSize !== estimatedItemSize
     );
+
+    this._cellCache = {};
 
     if (
       nextProps.itemCount !== itemCount ||
